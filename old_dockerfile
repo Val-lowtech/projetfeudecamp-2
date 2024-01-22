@@ -1,0 +1,47 @@
+# Utilisez l'image Node.js 16 pour Strapi
+FROM node:20 AS strapi
+
+# Définissez le répertoire de travail pour Strapi
+WORKDIR /Users/val/Documents/dev_backup/projetfeudecamp-2/strapi
+
+# Copiez les fichiers nécessaires pour Strapi
+COPY strapi/package*.json ./
+COPY strapi .
+
+
+# Construisez Strapi
+RUN yarn build
+
+# Utilisez l'image Node.js 16 pour Eleventy
+FROM node:20 AS eleventy
+
+# Définissez le répertoire de travail pour Eleventy
+WORKDIR /Users/val/Documents/dev_backup/projetfeudecamp-2/frontend
+
+# Copiez les fichiers nécessaires pour Eleventy
+COPY frontend/package*.json ./
+COPY frontend .
+
+# Installez les dépendances pour Eleventy
+RUN npm install
+
+# Construisez Eleventy
+RUN npm run build
+
+# Utilisez une image légère basée sur Nginx pour le déploiement final
+FROM nginx:alpine
+
+# Définissez le répertoire de travail pour Nginx
+WORKDIR /usr/share/nginx/html
+
+# Copiez les fichiers générés par Strapi depuis l'étape précédente (strapi)
+COPY --from=strapi /Users/val/Documents/dev_backup/projetfeudecamp-2/strapi/public ./strapi
+
+# Copiez les fichiers générés par Eleventy depuis l'étape précédente (eleventy)
+COPY --from=eleventy /Users/val/Documents/dev_backup/projetfeudecamp-2/frontend/_site ./eleventy
+
+# Exposez le port sur lequel Nginx écoutera
+EXPOSE 8080
+
+# Commande pour démarrer Nginx
+CMD ["nginx", "-g", "daemon off;"]
